@@ -19,3 +19,15 @@ options:
     file                      test proxies from file. if no file is provided it is
                               read from stdin
 ```
+
+# Example
+```sh
+$ cat proxies.txt
+socks5://123.123.123.123:123
+socks5://321.321.321.321:321
+
+$ cat proxies.txt | sockc
+socks5://123.123.123.123:123
+# errors are printed to stderr
+socks connect tcp 321.321.321.321:321->google.com:443: dial tcp: lookup 321.321.321.321: no such host
+```
