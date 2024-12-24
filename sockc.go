@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -16,6 +17,7 @@ import (
 )
 
 type Program struct {
+	Detail     bool     `name:"d" alias:"detail" description:"include the time to establish connection in the fragment of the proxy url (seconds)"`
 	Workers    uint     `name:"j" alias:"workers" metavar:"num" description:"number of concurrent workers (default: 8)"`
 	Network    string   `name:"n" alias:"network" metavar:"val" description:"(default: tcp)"`
 	OutputFile string   `name:"o" alias:"output" metavar:"file" description:"valid proxy output file (default: stdout)"`
@@ -138,11 +140,17 @@ func (p *Program) CheckProxy(url *url.URL) error {
 
 func (p *Program) Worker() {
 	for proxy := range p.pchan {
+		start := time.Now()
 		err := p.CheckProxy(proxy)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			continue
 		}
+
+		if p.Detail {
+			proxy.Fragment = strconv.FormatFloat(time.Now().Sub(start).Seconds(), 'f', -1, 64)
+		}
+
 		fmt.Fprintln(p.fout, proxy.String())
 	}
 }
