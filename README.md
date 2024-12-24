@@ -5,22 +5,21 @@ go install github.com/sloweax/sockc@latest # binary will likely be installed at 
 
 # Usage
 ```
-usage: sockc [-h] [-d] [-j num] [-n val] [-o file] [-t host] [-u] [-w seconds]
-             [-x url] [file...]
+usage: sockc [-h] [-d] [-j num] [-n val] [-o file] [-t host] [-u] [-w seconds] [-x url]
+             [file...]
 
 options:
     -h, --help                shows usage and exits
     -d, --detail              include the time to establish connection in the fragment
-                              of the proxy url (in seconds, excluding -x connection
-                              time)
+                              of the proxy url (in seconds)
     -j, --workers num         number of concurrent workers (default: 8)
     -n, --network val         (default: tcp)
     -o, --output file         valid proxy output file (default: stdout)
     -t, --target host         determines proxy validity by succesfully connecting
                               to host (default: google.com:443)
     -u, --unique              don't scan the same proxy url twice
-    -w, --timeout seconds     proxy connection timeout. 0 for no timeout. it does
-                              not count -x connection time (default: 10)
+    -w, --timeout seconds     proxy connection timeout. 0 for no timeout (default:
+                              10)
     -x, --proxy url           use proxy to connect to proxy
     file                      test proxies from file. if no file is provided it is
                               read from stdin
@@ -42,4 +41,4 @@ socks connect tcp 321.321.321.321:321->google.com:443: dial tcp: lookup 321.321.
 
 - socks5
 
-custom protocols are supported by implementing `golang.org/x/net/proxy`'s `proxy.ContextDialer` and registering it with `proxy.RegisterDialerType()`. to be compatible with `-x` option, it must also implement `DialerWithConn`
+custom protocols are supported by implementing `golang.org/x/net/proxy`'s `proxy.ContextDialer` and registering it with `proxy.RegisterDialerType()`
