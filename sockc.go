@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"net"
 	"net/url"
 	"os"
 	"strconv"
@@ -16,6 +17,10 @@ import (
 	"golang.org/x/net/proxy"
 )
 
+type DialerWithConn interface {
+	DialWithConn(context.Context, net.Conn, string, string) (net.Addr, error)
+}
+
 type Program struct {
 	Detail     bool     `name:"d" alias:"detail" description:"include the time to establish connection in the fragment of the proxy url (seconds)"`
 	Workers    uint     `name:"j" alias:"workers" metavar:"num" description:"number of concurrent workers (default: 8)"`
@@ -23,9 +28,11 @@ type Program struct {
 	OutputFile string   `name:"o" alias:"output" metavar:"file" description:"valid proxy output file (default: stdout)"`
 	Target     string   `name:"t" alias:"target" metavar:"host" description:"determines proxy validity by succesfully connecting to host (default: google.com:443)"`
 	Unique     bool     `name:"u" alias:"unique" description:"don't scan the same proxy url twice"`
-	Timeout    uint     `name:"w" alias:"timeout" metavar:"seconds" description:"proxy connection timeout. 0 for no timeout (default: 10)"`
+	Timeout    uint     `name:"w" alias:"timeout" metavar:"seconds" description:"proxy connection timeout. 0 for no timeout. it does not count -x connection time (default: 10)"`
+	Proxy      *string  `name:"x" alias:"proxy" metavar:"url" description:"use proxy to connect to proxy"`
 	ProxyFiles []string `name:"file" type:"positional" metavar:"file..." description:"test proxies from file. if no file is provided it is read from stdin"`
 
+	proxyUrl  *url.URL
 	scannedmu *sync.Mutex
 	scanned   map[string]struct{}
 	fout      *os.File
@@ -39,6 +46,14 @@ func (p *Program) Init() error {
 	}
 
 	p.pchan = make(chan *url.URL)
+
+	if p.Proxy != nil {
+		url, err := url.Parse(*p.Proxy)
+		if err != nil {
+			return err
+		}
+		p.proxyUrl = url
+	}
 
 	if p.OutputFile == "-" {
 		p.fout = os.Stdout
@@ -134,28 +149,60 @@ func (p *Program) CheckProxy(url *url.URL) error {
 		return err
 	}
 
-	dc, ok := d.(proxy.ContextDialer)
-	if !ok {
-		return fmt.Errorf("%s does not implement proxy.ContextDialer", url.Scheme)
-	}
+	if p.Proxy != nil {
+		pd, ok := d.(DialerWithConn)
+		if !ok {
+			return fmt.Errorf("%s does not implement DialerWithConn", url.Scheme)
+		}
 
-	var ctx context.Context
-	var cancel context.CancelFunc
+		ppd, err := proxy.FromURL(p.proxyUrl, nil)
+		if err != nil {
+			return err
+		}
 
-	if p.Timeout == 0 {
-		ctx = context.Background()
-	} else {
-		ctx, cancel = context.WithTimeout(context.Background(), time.Second*time.Duration(p.Timeout))
-		defer cancel()
-	}
+		pc, err := ppd.Dial(p.Network, url.Host)
+		if err != nil {
+			return err
+		}
+		defer pc.Close()
 
-	conn, err := dc.DialContext(ctx, p.Network, p.Target)
-	if err != nil {
+		var ctx context.Context
+		var cancel context.CancelFunc
+
+		if p.Timeout == 0 {
+			ctx = context.Background()
+		} else {
+			ctx, cancel = context.WithTimeout(context.Background(), time.Second*time.Duration(p.Timeout))
+			defer cancel()
+		}
+
+		_, err = pd.DialWithConn(ctx, pc, p.Network, p.Target)
+
 		return err
-	}
-	conn.Close()
+	} else {
+		dc, ok := d.(proxy.ContextDialer)
+		if !ok {
+			return fmt.Errorf("%s does not implement proxy.ContextDialer", url.Scheme)
+		}
 
-	return nil
+		var ctx context.Context
+		var cancel context.CancelFunc
+
+		if p.Timeout == 0 {
+			ctx = context.Background()
+		} else {
+			ctx, cancel = context.WithTimeout(context.Background(), time.Second*time.Duration(p.Timeout))
+			defer cancel()
+		}
+
+		conn, err := dc.DialContext(ctx, p.Network, p.Target)
+		if err != nil {
+			return err
+		}
+		defer conn.Close()
+
+		return nil
+	}
 }
 
 func (p *Program) Worker() {
