@@ -11,7 +11,8 @@ usage: sockc [-h] [-d] [-j num] [-n val] [-o file] [-t host] [-u] [-w seconds]
 options:
     -h, --help                shows usage and exits
     -d, --detail              include the time to establish connection in the fragment
-                              of the proxy url (seconds)
+                              of the proxy url (in seconds, excluding -x connection
+                              time)
     -j, --workers num         number of concurrent workers (default: 8)
     -n, --network val         (default: tcp)
     -o, --output file         valid proxy output file (default: stdout)

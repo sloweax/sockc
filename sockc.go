@@ -22,7 +22,7 @@ type DialerWithConn interface {
 }
 
 type Program struct {
-	Detail     bool     `name:"d" alias:"detail" description:"include the time to establish connection in the fragment of the proxy url (seconds)"`
+	Detail     bool     `name:"d" alias:"detail" description:"include the time to establish connection in the fragment of the proxy url (in seconds, excluding -x connection time)"`
 	Workers    uint     `name:"j" alias:"workers" metavar:"num" description:"number of concurrent workers (default: 8)"`
 	Network    string   `name:"n" alias:"network" metavar:"val" description:"(default: tcp)"`
 	OutputFile string   `name:"o" alias:"output" metavar:"file" description:"valid proxy output file (default: stdout)"`
@@ -143,26 +143,26 @@ func (p *Program) Run() error {
 	return p.fout.Close()
 }
 
-func (p *Program) CheckProxy(url *url.URL) error {
+func (p *Program) CheckProxy(url *url.URL) (time.Duration, error) {
 	d, err := proxy.FromURL(url, nil)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	if p.Proxy != nil {
 		pd, ok := d.(DialerWithConn)
 		if !ok {
-			return fmt.Errorf("%s does not implement DialerWithConn", url.Scheme)
+			return 0, fmt.Errorf("%s does not implement DialerWithConn", url.Scheme)
 		}
 
 		ppd, err := proxy.FromURL(p.proxyUrl, nil)
 		if err != nil {
-			return err
+			return 0, err
 		}
 
 		pc, err := ppd.Dial(p.Network, url.Host)
 		if err != nil {
-			return err
+			return 0, err
 		}
 		defer pc.Close()
 
@@ -176,13 +176,14 @@ func (p *Program) CheckProxy(url *url.URL) error {
 			defer cancel()
 		}
 
+		start := time.Now()
 		_, err = pd.DialWithConn(ctx, pc, p.Network, p.Target)
 
-		return err
+		return time.Now().Sub(start), err
 	} else {
 		dc, ok := d.(proxy.ContextDialer)
 		if !ok {
-			return fmt.Errorf("%s does not implement proxy.ContextDialer", url.Scheme)
+			return 0, fmt.Errorf("%s does not implement proxy.ContextDialer", url.Scheme)
 		}
 
 		var ctx context.Context
@@ -195,27 +196,27 @@ func (p *Program) CheckProxy(url *url.URL) error {
 			defer cancel()
 		}
 
+		start := time.Now()
 		conn, err := dc.DialContext(ctx, p.Network, p.Target)
 		if err != nil {
-			return err
+			return 0, err
 		}
 		defer conn.Close()
 
-		return nil
+		return time.Now().Sub(start), nil
 	}
 }
 
 func (p *Program) Worker() {
 	for proxy := range p.pchan {
-		start := time.Now()
-		err := p.CheckProxy(proxy)
+		dur, err := p.CheckProxy(proxy)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			continue
 		}
 
 		if p.Detail {
-			proxy.Fragment = strconv.FormatFloat(time.Now().Sub(start).Seconds(), 'f', -1, 64)
+			proxy.Fragment = strconv.FormatFloat(dur.Seconds(), 'f', -1, 64)
 		}
 
 		fmt.Fprintln(p.fout, proxy.String())
