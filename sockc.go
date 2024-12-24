@@ -138,25 +138,25 @@ func (p *Program) Run() error {
 	return p.fout.Close()
 }
 
-func (p *Program) CheckProxy(url *url.URL) (time.Duration, error) {
+func (p *Program) CheckProxy(url *url.URL) error {
 	var pd proxy.Dialer
 
 	if p.Proxy != nil {
 		tmp, err := proxy.FromURL(p.proxyUrl, nil)
 		if err != nil {
-			return 0, err
+			return err
 		}
 		pd = tmp
 	}
 
 	d, err := proxy.FromURL(url, pd)
 	if err != nil {
-		return 0, err
+		return err
 	}
 
 	dc, ok := d.(proxy.ContextDialer)
 	if !ok {
-		return 0, fmt.Errorf("%s does not implement proxy.ContextDialer", url.Scheme)
+		return fmt.Errorf("%s does not implement proxy.ContextDialer", url.Scheme)
 	}
 
 	var ctx context.Context
@@ -169,26 +169,26 @@ func (p *Program) CheckProxy(url *url.URL) (time.Duration, error) {
 		defer cancel()
 	}
 
-	start := time.Now()
 	conn, err := dc.DialContext(ctx, p.Network, p.Target)
 	if err != nil {
-		return 0, err
+		return err
 	}
 	defer conn.Close()
 
-	return time.Now().Sub(start), nil
+	return nil
 }
 
 func (p *Program) Worker() {
 	for proxy := range p.pchan {
-		dur, err := p.CheckProxy(proxy)
+		start := time.Now()
+		err := p.CheckProxy(proxy)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			continue
 		}
 
 		if p.Detail {
-			proxy.Fragment = strconv.FormatFloat(dur.Seconds(), 'f', -1, 64)
+			proxy.Fragment = strconv.FormatFloat(time.Now().Sub(start).Seconds(), 'f', -1, 64)
 		}
 
 		fmt.Fprintln(p.fout, proxy.String())
