@@ -22,14 +22,22 @@ type Program struct {
 	Network    string   `name:"n" alias:"network" metavar:"val" description:"(default: tcp)"`
 	OutputFile string   `name:"o" alias:"output" metavar:"file" description:"valid proxy output file (default: stdout)"`
 	Target     string   `name:"t" alias:"target" metavar:"host" description:"determines proxy validity by succesfully connecting to host (default: google.com:443)"`
+	Unique     bool     `name:"u" alias:"unique" description:"don't scan the same proxy url twice"`
 	Timeout    uint     `name:"w" alias:"timeout" metavar:"seconds" description:"proxy connection timeout. 0 for no timeout (default: 10)"`
 	ProxyFiles []string `name:"file" type:"positional" metavar:"file..." description:"test proxies from file. if no file is provided it is read from stdin"`
 
-	fout  *os.File
-	pchan chan *url.URL
+	scannedmu *sync.Mutex
+	scanned   map[string]struct{}
+	fout      *os.File
+	pchan     chan *url.URL
 }
 
 func (p *Program) Init() error {
+	if p.Unique {
+		p.scanned = make(map[string]struct{})
+		p.scannedmu = new(sync.Mutex)
+	}
+
 	p.pchan = make(chan *url.URL)
 
 	if p.OutputFile == "-" {
@@ -57,6 +65,18 @@ func (p *Program) LoadFile(f *os.File) error {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "invalid url %s\n", proxy)
 			continue
+		}
+		if p.Unique {
+			key := url.String()
+			p.scannedmu.Lock()
+			_, ok := p.scanned[key]
+			if !ok {
+				p.scanned[key] = struct{}{}
+				p.scannedmu.Unlock()
+			} else {
+				p.scannedmu.Unlock()
+				continue
+			}
 		}
 		p.pchan <- url
 	}

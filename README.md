@@ -5,7 +5,8 @@ go install github.com/sloweax/sockc@latest # binary will likely be installed at 
 
 # Usage
 ```
-usage: ./sockc [-h] [-d] [-j num] [-n val] [-o file] [-t host] [-w seconds] [file...]
+usage: ./sockc [-h] [-d] [-j num] [-n val] [-o file] [-t host] [-u] [-w seconds]
+               [file...]
 
 options:
     -h, --help                shows usage and exits
@@ -16,6 +17,7 @@ options:
     -o, --output file         valid proxy output file (default: stdout)
     -t, --target host         determines proxy validity by succesfully connecting
                               to host (default: google.com:443)
+    -u, --unique              don't scan the same proxy url twice
     -w, --timeout seconds     proxy connection timeout. 0 for no timeout (default:
                               10)
     file                      test proxies from file. if no file is provided it is
