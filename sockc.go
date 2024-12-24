@@ -102,9 +102,8 @@ func (p *Program) Run() error {
 
 	close(p.pchan)
 	wg.Wait()
-	p.fout.Close()
 
-	return nil
+	return p.fout.Close()
 }
 
 func (p *Program) CheckProxy(url *url.URL) error {
