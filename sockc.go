@@ -17,6 +17,7 @@ import (
 )
 
 type Program struct {
+	Append     bool     `name:"a" alias:"append" description:"open output file in append mode"`
 	Detail     bool     `name:"d" alias:"detail" description:"include the time to establish connection in the fragment of the proxy url (in seconds)"`
 	Workers    uint     `name:"j" alias:"workers" metavar:"num" description:"number of concurrent workers (default: 8)"`
 	Network    string   `name:"n" alias:"network" metavar:"val" description:"(default: tcp)"`
@@ -53,7 +54,11 @@ func (p *Program) Init() error {
 	if p.OutputFile == "-" {
 		p.fout = os.Stdout
 	} else {
-		if f, err := os.OpenFile(p.OutputFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644); err != nil {
+		flags := os.O_WRONLY | os.O_CREATE
+		if p.Append {
+			flags |= os.O_APPEND
+		}
+		if f, err := os.OpenFile(p.OutputFile, flags, 0644); err != nil {
 			return err
 		} else {
 			p.fout = f

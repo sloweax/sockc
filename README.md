@@ -5,11 +5,12 @@ go install github.com/sloweax/sockc@latest # binary will likely be installed at 
 
 # Usage
 ```
-usage: sockc [-h] [-d] [-j num] [-n val] [-o file] [-t host] [-u] [-w seconds] [-x url]
-             [file...]
+usage: sockc [-h] [-a] [-d] [-j num] [-n val] [-o file] [-t host] [-u] [-w seconds]
+             [-x url] [file...]
 
 options:
     -h, --help                shows usage and exits
+    -a, --append              open output file in append mode
     -d, --detail              include the time to establish connection in the fragment
                               of the proxy url (in seconds)
     -j, --workers num         number of concurrent workers (default: 8)
