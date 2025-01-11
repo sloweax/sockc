@@ -14,7 +14,7 @@ options:
     -d, --detail              include the time to establish connection in the fragment
                               of the proxy url (in seconds)
     -j, --workers num         number of concurrent workers (default: 8)
-    -n, --network val         (default: tcp)
+    -n, --network val         network to connect to -t (default: tcp)
     -o, --output file         valid proxy output file (default: stdout)
     -t, --target host         determines proxy validity by succesfully connecting
                               to host (default: google.com:443)

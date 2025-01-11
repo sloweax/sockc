@@ -20,7 +20,7 @@ type Program struct {
 	Append     bool     `name:"a" alias:"append" description:"open output file in append mode"`
 	Detail     bool     `name:"d" alias:"detail" description:"include the time to establish connection in the fragment of the proxy url (in seconds)"`
 	Workers    uint     `name:"j" alias:"workers" metavar:"num" description:"number of concurrent workers (default: 8)"`
-	Network    string   `name:"n" alias:"network" metavar:"val" description:"(default: tcp)"`
+	Network    string   `name:"n" alias:"network" metavar:"val" description:"network to connect to -t (default: tcp)"`
 	OutputFile string   `name:"o" alias:"output" metavar:"file" description:"valid proxy output file (default: stdout)"`
 	Target     string   `name:"t" alias:"target" metavar:"host" description:"determines proxy validity by succesfully connecting to host (default: google.com:443)"`
 	Unique     bool     `name:"u" alias:"unique" description:"don't scan the same proxy url twice"`
