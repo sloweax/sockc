@@ -41,5 +41,6 @@ socks connect tcp 321.321.321.321:321->google.com:443: dial tcp: lookup 321.321.
 # Supported protocols
 
 - socks5
+- shadowsocks
 
 custom protocols are supported by implementing `golang.org/x/net/proxy`'s `proxy.ContextDialer` and registering it with `proxy.RegisterDialerType()`

@@ -13,6 +13,7 @@ import (
 	"unicode"
 
 	"github.com/sloweax/argparse"
+	_ "github.com/sloweax/sockc/shadowsocks"
 	"golang.org/x/net/proxy"
 )
 
