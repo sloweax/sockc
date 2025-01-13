@@ -3,7 +3,9 @@ package main
 import (
 	"bufio"
 	"context"
+	"crypto/tls"
 	"fmt"
+	"net"
 	"net/url"
 	"os"
 	"strconv"
@@ -23,11 +25,12 @@ type Program struct {
 	Workers    uint     `name:"j" alias:"workers" metavar:"num" description:"number of concurrent workers (default: 8)"`
 	Network    string   `name:"n" alias:"network" metavar:"val" description:"network to connect to -t (default: tcp)"`
 	OutputFile string   `name:"o" alias:"output" metavar:"file" description:"valid proxy output file (default: stdout)"`
-	Target     string   `name:"t" alias:"target" metavar:"host" description:"determines proxy validity by succesfully connecting to host (default: google.com:443)"`
+	Target     string   `name:"t" alias:"target" metavar:"host" description:"target host to check proxy validity. see \"-v\" option (default: google.com:443)"`
 	Unique     bool     `name:"u" alias:"unique" description:"don't scan the same proxy url twice"`
+	Validity   string   `name:"v" alias:"validity" description:"connect: validity by just connecting, tls: validity by succesfull tls handshake (default: tls)"`
 	Timeout    uint     `name:"w" alias:"timeout" metavar:"seconds" description:"proxy connection timeout. 0 for no timeout (default: 10)"`
-	Proxy      *string  `name:"x" alias:"proxy" metavar:"url" description:"use proxy to connect to proxy"`
-	ProxyFiles []string `name:"file" type:"positional" metavar:"file..." description:"test proxies from file. if no file is provided it is read from stdin"`
+	Proxy      *string  `name:"x" alias:"proxy" metavar:"url" description:"use proxy to connect to proxies"`
+	ProxyFiles []string `name:"file" type:"positional" metavar:"file..." description:"check proxies from file. if no file is provided it is read from stdin"`
 
 	proxyUrl  *url.URL
 	scannedmu *sync.Mutex
@@ -40,6 +43,12 @@ func (p *Program) Init() error {
 	if p.Unique {
 		p.scanned = make(map[string]struct{})
 		p.scannedmu = new(sync.Mutex)
+	}
+
+	switch p.Validity {
+	case "connect", "tls":
+	default:
+		return fmt.Errorf(`unsupported value for option -v %q`, p.Validity)
 	}
 
 	p.pchan = make(chan *url.URL)
@@ -181,6 +190,20 @@ func (p *Program) CheckProxy(url *url.URL) error {
 	}
 	defer conn.Close()
 
+	switch p.Validity {
+	case "tls":
+		host, _, err := net.SplitHostPort(p.Target)
+		if err != nil {
+			return err
+		}
+		tlsconn := tls.Client(conn, &tls.Config{ServerName: host})
+		conn = tlsconn
+		if err := tlsconn.HandshakeContext(ctx); err != nil {
+			return err
+		}
+	case "connect":
+	}
+
 	return nil
 }
 
@@ -206,6 +229,7 @@ func main() {
 		Network:    "tcp",
 		Target:     "google.com:443",
 		OutputFile: "-",
+		Validity:   "tls",
 		Workers:    8,
 		Timeout:    10,
 	}

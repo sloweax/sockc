@@ -5,7 +5,7 @@ go install github.com/sloweax/sockc@latest # binary will likely be installed at 
 
 # Usage
 ```
-usage: sockc [-h] [-a] [-d] [-j num] [-n val] [-o file] [-t host] [-u] [-w seconds]
+usage: sockc [-h] [-a] [-d] [-j num] [-n val] [-o file] [-t host] [-u] [-v var] [-w seconds]
              [-x url] [file...]
 
 options:
@@ -16,14 +16,16 @@ options:
     -j, --workers num         number of concurrent workers (default: 8)
     -n, --network val         network to connect to -t (default: tcp)
     -o, --output file         valid proxy output file (default: stdout)
-    -t, --target host         determines proxy validity by succesfully connecting
-                              to host (default: google.com:443)
+    -t, --target host         target host to check proxy validity. see "-v" option
+                              (default: google.com:443)
     -u, --unique              don't scan the same proxy url twice
+    -v, --validity var        connect: validity by just connecting, tls: validity
+                              by succesfull tls handshake (default: tls)
     -w, --timeout seconds     proxy connection timeout. 0 for no timeout (default:
                               10)
-    -x, --proxy url           use proxy to connect to proxy
-    file                      test proxies from file. if no file is provided it is
-                              read from stdin
+    -x, --proxy url           use proxy to connect to proxies
+    file                      check proxies from file. if no file is provided it
+                              is read from stdin
 ```
 
 # Example
